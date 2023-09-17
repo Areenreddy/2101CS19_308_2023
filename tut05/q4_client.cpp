@@ -1,71 +1,52 @@
-#include <string>
-#include <vector>
 #include <iostream>
-#include <winsock2.h>
 #include <cstring>
+#include <netinet/in.h>
+#include <arpa/inet.h>
+#include <unistd.h>
+#include <sys/socket.h>
+#include <cstdlib>
+#include <cstdio>
+#include <vector>
 
-
+#define SERVER_IP "127.0.0.1"
+#define PORT_TASK4 12348
 using namespace std;
 
-int main() {
-  // Initialize Winsock
-  WSADATA wsaData;
-  WSAStartup(MAKEWORD(2, 2), &wsaData);
+int main(int argc, char* argv[]) 
+{
+    int clientSocket;
+    struct sockaddr_in serverAddr;
+    socklen_t addr_size;
+    // Create socket
+    clientSocket = socket(PF_INET, SOCK_STREAM, 0);
+    if (clientSocket < 0) 
+   {
+        perror("Error creating socket");
+        exit(EXIT_FAILURE);
+    }
+    // Configure server address
+    serverAddr.sin_family = AF_INET;
+    memset(serverAddr.sin_zero, '\0', sizeof serverAddr.sin_zero);
+    serverAddr.sin_port = htons(PORT_TASK4);
+    serverAddr.sin_addr.s_addr = inet_addr(SERVER_IP);
 
-  // Create a TCP socket
-  SOCKET client_socket = socket(AF_INET, SOCK_STREAM, IPPROTO_TCP);
-  if (client_socket == INVALID_SOCKET) {
-    cout << "Error creating socket: " << WSAGetLastError() << endl;
-    return 1;
-  }
+    // Try connecting to the selected task server
+    if (connect(clientSocket, (struct sockaddr *)&serverAddr, sizeof serverAddr) == 0) 
+    {
+               std::vector<int> integer_array = {1, 2, 3, 4, 5};
+                send(clientSocket, integer_array.data(), integer_array.size() * sizeof(int), 0);
 
-  // Connect to the server
-  SOCKADDR_IN server_address;
-  server_address.sin_family = AF_INET;
-  server_address.sin_port = htons(22222);
-  server_address.sin_addr.s_addr = inet_addr("127.1.1.12");
+                // Receive and display the server's response for Task 4
+                int response;
+                recv(clientSocket, &response, sizeof(response), 0);
+                std::cout << "Sum of elements in the array (Task 4): " << response << std::endl;
+                
+    }
 
-  if (connect(client_socket, (SOCKADDR*)&server_address, sizeof(server_address)) == SOCKET_ERROR) {
-    cout << "Error connecting to server: " << WSAGetLastError() << endl;
-    return 1;
-  }
+    // Close the client socket
+    close(clientSocket);
 
-  // Get the list of numbers from the user
-  string message_list;
-  cout << "Enter a list of numbers: ";
-  getline(cin, message_list);
-
-  // Split the list of numbers into a vector
-  vector<int> numbers;
-  for (string number : split(message_list, ' ')) {
-    numbers.push_back(stoi(number));
-  }
-
-  // Create the message to send to the server
-  string message = "a";
-  for (int number : numbers) {
-    message += to_string(number) + " ";
-  }
-
-  // Send the message to the server
-  send(client_socket, message.c_str(), message.length(), 0);
-
-  // Receive the response message from the server
-  char response_message[1024];
-  int response_message_size = recv(client_socket, response_message, sizeof(response_message), 0);
-  if (response_message_size == SOCKET_ERROR) {
-    cout << "Error receiving response message: " << WSAGetLastError() << endl;
-    return 1;
-  }
-
-  // Print the response message
-  cout << "Server's response: " << response_message << endl;
-
-  // Close the socket
-  closesocket(client_socket);
-
-  // Shutdown Winsock
-  WSACleanup();
-
-  return 0;
+    return 0;
 }
+
+

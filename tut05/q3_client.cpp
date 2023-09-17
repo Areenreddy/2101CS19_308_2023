@@ -1,52 +1,65 @@
 #include <iostream>
-#include <winsock2.h>
+#include <cstring>
+#include <netinet/in.h>
+#include <arpa/inet.h>
+#include <unistd.h>
+#include <sys/socket.h>
+#include <cstdlib>
+#include <cstdio>
+#include <vector>
 
+#define SERVER_IP "127.0.0.1"
+#define PORT_TASK3 12347
 using namespace std;
 
-int main() {
-  // Initialize Winsock
-  WSADATA wsaData;
-  WSAStartup(MAKEWORD(2, 2), &wsaData);
+int main(int argc, char* argv[]) 
+{
+    int clientSocket;
+    struct sockaddr_in serverAddr;
+    socklen_t addr_size;
+    // Create socket
+    clientSocket = socket(PF_INET, SOCK_STREAM, 0);
+    if (clientSocket < 0) 
+   {
+        perror("Error creating socket");
+        exit(EXIT_FAILURE);
+    }
+    // Configure server address
+    serverAddr.sin_family = AF_INET;
+    memset(serverAddr.sin_zero, '\0', sizeof serverAddr.sin_zero);
+    serverAddr.sin_port = htons(PORT_TASK3);
+    serverAddr.sin_addr.s_addr = inet_addr(SERVER_IP);
 
-  // Create a TCP socket
-  SOCKET client_socket = socket(AF_INET, SOCK_STREAM, IPPROTO_TCP);
-  if (client_socket == INVALID_SOCKET) {
-    cout << "Error creating socket: " << WSAGetLastError() << endl;
-    return 1;
-  }
+    // Try connecting to the selected task server
+    if (connect(clientSocket, (struct sockaddr *)&serverAddr, sizeof serverAddr) == 0) 
+    {
+               if (argc < 1) 
+		{
+                    std::cerr << "Usage: <input_string>" << std::endl;
+                    close(clientSocket);
+                    return 1;
+                }
 
-  // Connect to the server
-  SOCKADDR_IN server_address;
-  server_address.sin_family = AF_INET;
-  server_address.sin_port = htons(12345);
-  server_address.sin_addr.s_addr = inet_addr("127.0.0.1");
+                std::string input_string = argv[1];
+                send(clientSocket, input_string.c_str(), input_string.length(), 0);
 
-  if (connect(client_socket, (SOCKADDR*)&server_address, sizeof(server_address)) == SOCKET_ERROR) {
-    cout << "Error connecting to server: " << WSAGetLastError() << endl;
-    return 1;
-  }
+                // Receive and display the server's response for Task 3
+               int response;
+                recv(clientSocket, &response, sizeof(response), 0);
+               if(response==0)
+		{
+			cout<<"Not palindrome"<<endl;
+		}
+		else{
+			cout<<"Palindrome"<<endl;						
+	        }
+		
+    }
 
-  // Send the message to the server
-  string message = "MALAYALAM";
-  message = "3" + message + "3";
-  send(client_socket, message.c_str(), message.length(), 0);
+    // Close the client socket
+    close(clientSocket);
 
-  // Receive the response message from the server
-  char response_message[1024];
-  int response_message_size = recv(client_socket, response_message, sizeof(response_message), 0);
-  if (response_message_size == SOCKET_ERROR) {
-    cout << "Error receiving response message: " << WSAGetLastError() << endl;
-    return 1;
-  }
-
-  // Print the response message
-  cout << "Server's response: " << response_message << endl;
-
-  // Close the socket
-  closesocket(client_socket);
-
-  // Shutdown Winsock
-  WSACleanup();
-
-  return 0;
+    return 0;
 }
+
+
